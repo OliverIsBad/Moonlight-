@@ -43,7 +43,7 @@ public class Game
         // Try to load parallax pack (optional)
         try
         {
-            // Load new ParallaxBackground pack (folder: assets/ParallaxBackground)
+            // Load ParallaxBackground pack (folder: assets/ParallaxBackground)
             _parallaxBg = SpriteLoader.Load("assets/ParallaxBackground/Sky.png");
             _parallaxFar = SpriteLoader.Load("assets/ParallaxBackground/DownLayer.png");
             _parallaxMid = SpriteLoader.Load("assets/ParallaxBackground/MiddleLayer.png");
@@ -57,7 +57,7 @@ public class Game
         }
         catch { _hasParallax = false; }
 
-    // Register a simple tile type (id 1) using the first frame
+        // Register a simple tile type (id 1) using the first frame
     var ground = new TileType(1, "Ground", 0) { IsSolid = true };
 
         // Load map from text file
@@ -71,12 +71,19 @@ public class Game
     AudioManager.LoadSound("land", "assets/sounds/45_Landing_01.wav");
     // footstep (rock) used when player walks
     AudioManager.LoadSound("step_rock_02", "assets/sounds/08_Step_rock_02.wav");
+    // alternate footstep (wood) - chosen randomly with rock for variety
+    AudioManager.LoadSound("step_wood_03", "assets/sounds/12_Step_wood_03.wav");
+    // attack sound (56_Attack_03.wav)
+    AudioManager.LoadSound("attack03", "assets/sounds/56_Attack_03.wav");
     AudioManager.LoadMusic("theme", "assets/music/theme.mp3");
     // start playing background music (if loaded)
     AudioManager.PlayMusic("theme");
 
     // Create player (temporary position). We'll compute a better spawn placement below.
     player = new Player(0, 0, _map);
+        // Configure a tighter collision box for the player (source pixels)
+        // Using src coords: offsetX=6, offsetY=6, width=20, height=28 (will be multiplied by player._scale)
+        try { player.SetCustomBoundingBoxSrc(6, 6, 20, 28); } catch { }
 
         if (hasSpawn)
         {
