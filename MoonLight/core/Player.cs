@@ -13,11 +13,11 @@ public class Player : Entity
     private float _frameTime;
     private float _frameSpeed = 0.15f; // Controls animation speed
     private float _scale = 4f;         // Pixel scaling
-    private float _speed = 2f;         // Movement speed
+    private float _speed = 4f;         // Movement speed
     private TileMap? _map;
     private System.Numerics.Vector2 _vel = new System.Numerics.Vector2(0,0);
     private float _gravity = 0.6f;
-    private float _jumpSpeed = -10f;
+    private float _jumpSpeed = -15f;
     private bool _onGround = false;
 
     // Enum representing all animation states
@@ -32,6 +32,9 @@ public class Player : Entity
     }
 
     private AnimState _state = AnimState.IdleRight; // Default starting state
+    // Footstep sound timer
+    private float _stepTimer = 0f;
+    private float _stepInterval = 0.35f; // seconds between footstep sounds while walking
 
     public Player(float x, float y, TileMap? map = null) : base(x, y)
     {
@@ -65,16 +68,7 @@ public class Player : Entity
             moving = true;
         }
 
-        // Jump (example: space key)
-        if (IsKeyPressed(KeyboardKey.KEY_SPACE))
-        {
-            if (_state == AnimState.WalkRight || _state == AnimState.IdleRight)
-                _state = AnimState.JumpRight;
-            else if (_state == AnimState.WalkLeft || _state == AnimState.IdleLeft)
-                _state = AnimState.JumpLeft;
-
-            moving = true;
-        }
+        // jump state is set when the actual jump is performed (when on ground)
 
         // If no input, set idle based on last direction
         if (!moving)
@@ -85,7 +79,7 @@ public class Player : Entity
                 _state = AnimState.IdleLeft;
         }
 
-        // Apply gravity
+    // Apply gravity
         _vel.Y += _gravity;
 
         // Jump
@@ -97,6 +91,8 @@ public class Player : Entity
                 _state = AnimState.JumpRight;
             else
                 _state = AnimState.JumpLeft;
+            // play jump sound (if loaded)
+            AudioManager.PlaySound("jump");
         }
 
         // Horizontal collision: move horizontally then resolve
@@ -107,12 +103,38 @@ public class Player : Entity
         Y += _vel.Y;
         ResolveCollisions(horizontal: false);
 
-        // Update animation frame
-        _frameTime += GetFrameTime();
-        if (_frameTime >= _frameSpeed)
+        // Footstep sound: play periodically while moving and on ground
+        if (moving && _onGround)
         {
-            _currentFrame = GetNextFrame();
-            _frameTime = 0;
+            _stepTimer += GetFrameTime();
+            if (_stepTimer >= _stepInterval)
+            {
+                _stepTimer = 0f;
+                    // always play rock step sound
+                    AudioManager.PlaySound("step_rock_02");
+            }
+        }
+        else
+        {
+            // reset so the next step waits a full interval
+            _stepTimer = _stepInterval;
+        }
+
+        // Update animation frame
+        // If player is in the air and in a jump state, lock to the last jump frame
+        if (!_onGround && (_state == AnimState.JumpRight || _state == AnimState.JumpLeft))
+        {
+            _currentFrame = (_state == AnimState.JumpRight) ? 9 : 11;
+            // keep frameTime as-is (no cycling)
+        }
+        else
+        {
+            _frameTime += GetFrameTime();
+            if (_frameTime >= _frameSpeed)
+            {
+                _currentFrame = GetNextFrame();
+                _frameTime = 0;
+            }
         }
     }
 
@@ -142,6 +164,8 @@ public class Player : Entity
                 // player is above tile -> land on it
                 Y = r.y - playerRect.height;
                 _vel.Y = 0;
+                // play landing sound only when we were previously not on ground
+                if (!_onGround) AudioManager.PlaySound("land");
                 _onGround = true;
             }
             else if (min == bottom)

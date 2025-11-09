@@ -12,7 +12,9 @@ public class Program
     public static void Main(string[] args)
     {
 
-        InitWindow(800,600, "Raylib");
+    InitWindow(800,600, "Raylib");
+    // initialize audio device (via AudioManager wrapper)
+    MoonLightGame.Core.AudioManager.Init();
         SetTargetFPS(60);
 
         Game game = new Game();
@@ -23,7 +25,9 @@ public class Program
             game.Draw();
         }
 
-        CloseWindow();
+    // shutdown audio before closing window
+    MoonLightGame.Core.AudioManager.Shutdown();
+    CloseWindow();
 
 
     }

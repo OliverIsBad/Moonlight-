@@ -6,7 +6,7 @@ using System.Numerics;
 
 namespace MoonLightGame.Core;
 
-// Ein einfaches Tile-Grid, das Indices zu TileType-IDs hält.
+// A simple tile grid that stores indices to TileType IDs.
 public class TileMap
 {
     public int Width { get; }
@@ -17,7 +17,7 @@ public class TileMap
     private int[,] _grid;
     private readonly Dictionary<int, TileType> _types = new();
 
-    // Konstruktor: width/height in Tiles
+    // Constructor: width/height in tiles
     public TileMap(int width, int height, int defaultTileId = -1)
     {
         Width = width;
@@ -129,7 +129,7 @@ public class TileMap
             {
                 if (IsSolidAtTile(tx, ty))
                 {
-                    // Return collision rects in world pixel coordinates (unscaled)
+                    // Return collision rects in world pixel coordinates (scaled)
                     rects.Add(new Rectangle(tx * TileWidth * scale, ty * TileHeight * scale, TileWidth * scale, TileHeight * scale));
                 }
             }

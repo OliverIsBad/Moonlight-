@@ -3,22 +3,22 @@ using System.Collections.Generic;
 
 namespace MoonLightGame.Core;
 
-// Metadaten für einen Tile-Typ. Hier werden Darstellung und einfache Eigenschaften gehalten.
+// Metadata for a tile type. Holds visual settings and simple properties.
 public class TileType
 {
     public int Id { get; }
     public string Name { get; set; }
 
-    // Index in das geschnittene Sprite-Array (SpriteLoader.Slice)
+    // Index into the sliced sprite array (SpriteLoader.Slice)
     public int FrameIndex { get; set; }
 
-    // Einfache Physik-/Interaktionsflags
+    // Simple physics / interaction flags
     public bool IsSolid { get; set; } = false;
     public bool BlocksLight { get; set; } = false;
 
-    // Animation (optional): Indices in das Frame-Array
+    // Animation (optional): indices into the frame array
     public int[]? AnimationFrames { get; set; }
-    public float AnimationSpeed { get; set; } = 0.1f; // Sekunden pro Frame
+    public float AnimationSpeed { get; set; } = 0.1f; // seconds per frame
 
     public TileType(int id, string name, int frameIndex)
     {
