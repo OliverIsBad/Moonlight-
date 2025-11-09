@@ -22,6 +22,12 @@ public class Game
     private float _lightRadius = 140f; // in screen pixels
     private Color _nightColor = new Color(0, 0, 0, 200);
     private Camera2D _camera;
+    // Parallax background layers (optional)
+    private Texture _parallaxBg = new Texture();
+    private Texture _parallaxFar = new Texture();
+    private Texture _parallaxMid = new Texture();
+    private Texture _parallaxClose = new Texture();
+    private bool _hasParallax = false;
     // Simple particle system
     private readonly List<Particle> _particles = new List<Particle>();
     private float _particleSpawnTimer = 0f;
@@ -33,6 +39,23 @@ public class Game
         _tileSheet = SpriteLoader.Load("assets/tiles/tile01.png");
         SetTextureFilter(_tileSheet, TextureFilter.TEXTURE_FILTER_POINT);
         _tileFrames = SpriteLoader.Slice(_tileSheet, 32, 32);
+
+        // Try to load parallax pack (optional)
+        try
+        {
+            // Load new ParallaxBackground pack (folder: assets/ParallaxBackground)
+            _parallaxBg = SpriteLoader.Load("assets/ParallaxBackground/Sky.png");
+            _parallaxFar = SpriteLoader.Load("assets/ParallaxBackground/DownLayer.png");
+            _parallaxMid = SpriteLoader.Load("assets/ParallaxBackground/MiddleLayer.png");
+            _parallaxClose = SpriteLoader.Load("assets/ParallaxBackground/TopLayer.png");
+            // use bilinear filter for smooth parallax
+            SetTextureFilter(_parallaxBg, TextureFilter.TEXTURE_FILTER_BILINEAR);
+            SetTextureFilter(_parallaxFar, TextureFilter.TEXTURE_FILTER_BILINEAR);
+            SetTextureFilter(_parallaxMid, TextureFilter.TEXTURE_FILTER_BILINEAR);
+            SetTextureFilter(_parallaxClose, TextureFilter.TEXTURE_FILTER_BILINEAR);
+            _hasParallax = true;
+        }
+        catch { _hasParallax = false; }
 
     // Register a simple tile type (id 1) using the first frame
     var ground = new TileType(1, "Ground", 0) { IsSolid = true };
@@ -182,20 +205,73 @@ public class Game
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
-        // Draw a fullscreen checkerboard background (purple tones) before world rendering
-        int cellSize = (int)(_map.TileWidth * _scale);
-        if (cellSize <= 0) cellSize = 32;
-        int cols = (int)Math.Ceiling(GetScreenWidth() / (double)cellSize) + 1;
-        int rows = (int)Math.Ceiling(GetScreenHeight() / (double)cellSize) + 1;
-        // two purple tones
-        Color darkPurple = new Color(48, 16, 64, 255);
-        Color lightPurple = new Color(88, 40, 128, 255);
-        for (int y = 0; y < rows; y++)
+        // Parallax background (if present) or fallback checkerboard
+    if (_hasParallax)
         {
-            for (int x = 0; x < cols; x++)
+            // camera world target used for parallax offset
+            Vector2 cam = _camera.target;
+            int sw = GetScreenWidth();
+            int sh = GetScreenHeight();
+
+            // Draw a parallax layer scaled to base size (480x272) then scaled to fill the screen.
+            // All layers will be bottom-aligned so they stack exactly on top of each other.
+            void DrawLayer(Texture tex, float parallaxFactor)
             {
-                var c = ((x + y) % 2 == 0) ? darkPurple : lightPurple;
-                DrawRectangle(x * cellSize, y * cellSize, cellSize, cellSize, c);
+                if (tex.width == 0 || tex.height == 0) return;
+
+                const float baseW = 480f;
+                const float baseH = 272f;
+                float scaleX = sw / baseW;
+                float scaleY = sh / baseH;
+                // scale so the base area fills the screen (no black bars)
+                float s = Math.Max(scaleX, scaleY);
+
+                float texDrawW = baseW * s; // target draw width
+                float texDrawH = baseH * s; // target draw height
+
+                // compute base x offset so layer scrolls slower than camera (in world units)
+                float x = -((cam.X) * (1 - parallaxFactor)) % texDrawW;
+                if (x > 0) x -= texDrawW;
+
+                // bottom-align: place so bottom of layer matches bottom of screen
+                float y = sh - texDrawH;
+
+                // draw tiled across screen so movement never shows gaps
+                for (float px = x - texDrawW; px < sw + texDrawW; px += texDrawW)
+                {
+                    // DrawTexturePro to scale the original texture into the target base area
+                    Rectangle src = new Rectangle(0, 0, tex.width, tex.height);
+                    Rectangle dest = new Rectangle(px, y, texDrawW, texDrawH);
+                    DrawTexturePro(tex, src, dest, new Vector2(0, 0), 0f, WHITE);
+                }
+            }
+
+            // background base (furthest)
+            DrawLayer(_parallaxBg, 0.05f);
+            // far trees
+            DrawLayer(_parallaxFar, 0.15f);
+            // mid trees
+            DrawLayer(_parallaxMid, 0.35f);
+            // close trees (slower now)
+            DrawLayer(_parallaxClose, 0.4f);
+        }
+        else
+        {
+            // Draw a fullscreen checkerboard background (purple tones) before world rendering
+            int cellSize = (int)(_map.TileWidth * _scale);
+            if (cellSize <= 0) cellSize = 32;
+            int cols = (int)Math.Ceiling(GetScreenWidth() / (double)cellSize) + 1;
+            int rows = (int)Math.Ceiling(GetScreenHeight() / (double)cellSize) + 1;
+            // two purple tones
+            Color darkPurple = new Color(48, 16, 64, 255);
+            Color lightPurple = new Color(88, 40, 128, 255);
+            for (int y = 0; y < rows; y++)
+            {
+                for (int x = 0; x < cols; x++)
+                {
+                    var c = ((x + y) % 2 == 0) ? darkPurple : lightPurple;
+                    DrawRectangle(x * cellSize, y * cellSize, cellSize, cellSize, c);
+                }
             }
         }
 
