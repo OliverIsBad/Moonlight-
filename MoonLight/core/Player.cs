@@ -326,7 +326,7 @@ public class Player : Entity
         }
     }
 
-    public override void Draw(float scale)
+    public override void Draw(float scale, bool showMasks = false)
     {
         // Draw the current animation frame (clamped index)
         if (_isAttacking && _hasAttack && _attackFrames != null && _attackSheet.HasValue)
@@ -347,8 +347,8 @@ public class Player : Entity
                 float destAX = facingLeft ? (X - (drawWA - playerDrawW)) : X;
                 Rectangle destA = new Rectangle(destAX, Y, drawWA, drawHA);
                 DrawTexturePro(_attackSheet.Value, srcA, destA, new Vector2(0, 0), 0f, WHITE);
-            // draw attack hitbox for debug/visibility when active
-            if (_attackHitboxActive)
+            // draw attack hitbox for debug/visibility when active and requested
+            if (showMasks && _attackHitboxActive)
             {
                 var a = _attackHitbox;
                 DrawRectangleLines((int)a.x, (int)a.y, (int)a.width, (int)a.height, RED);

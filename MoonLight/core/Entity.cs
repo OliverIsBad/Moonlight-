@@ -14,5 +14,6 @@ public abstract class Entity
     }
 
     public abstract void Update();
-    public abstract void Draw(float scale);
+    // showMasks: when true, implementations should draw debug masks (collision boxes, hitboxes)
+    public abstract void Draw(float scale, bool showMasks = false);
 }

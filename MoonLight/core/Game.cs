@@ -31,6 +31,8 @@ public class Game
     // Simple particle system
     private readonly List<Particle> _particles = new List<Particle>();
     private float _particleSpawnTimer = 0f;
+    // rarer particles that originate from blocks
+    private float _blockParticleTimer = 0f;
     private Random _rand = new Random();
 
     public Game()
@@ -197,6 +199,45 @@ public class Game
                     _particles.Add(new Particle(pos, vel, life, size, c));
                 }
             }
+
+            // --- Block-originating particles (rarer than player but increased a bit) ---
+            _blockParticleTimer += dt;
+            float blockSpawnInterval = 0.35f; // attempt more often
+            if (_blockParticleTimer >= blockSpawnInterval)
+            {
+                _blockParticleTimer = 0f;
+                // increased chance to spawn a small burst from a block
+                if (_map != null && _rand.NextDouble() < 0.65)
+                {
+                    // try a few times to find a random solid tile
+                    for (int attempt = 0; attempt < 6; attempt++)
+                    {
+                        int tx = _rand.Next(0, Math.Max(1, _map.Width));
+                        int ty = _rand.Next(0, Math.Max(1, _map.Height));
+                        if (_map.IsSolidAtTile(tx, ty))
+                        {
+                            // spawn 1-2 small purple particles near the tile center
+                            float tileW = _map.TileWidth * _scale;
+                            float tileH = _map.TileHeight * _scale;
+                            // base 1-2, then triple the count so blocks emit ~3x more particles
+                            int spawnCount = (1 + _rand.Next(0, 2)) * 3; // 3 or 6
+                            for (int s = 0; s < spawnCount; s++)
+                            {
+                                float px = tx * tileW + tileW * 0.5f + (float)(_rand.NextDouble() - 0.5) * 8f;
+                                float py = ty * tileH + tileH * 0.5f + (float)(_rand.NextDouble() - 0.5) * 8f;
+                                Vector2 pos = new Vector2(px, py);
+                                // subtle upward/side velocity with more variety
+                                Vector2 vel = new Vector2((float)(_rand.NextDouble() - 0.5) * 10f, (float)(_rand.NextDouble() - 0.8) * 8f);
+                                float life = (float)(_rand.NextDouble() * 0.9 + 0.5);
+                                float size = (float)(_rand.NextDouble() * 1.8 + 0.7);
+                                Color c = new Color((byte)180, (byte)100, (byte)220, (byte)_rand.Next(120, 230));
+                                _particles.Add(new Particle(pos, vel, life, size, c));
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
         }
 
         // update existing particles and remove dead ones
@@ -300,10 +341,15 @@ public class Game
             Vector2 playerWorldCenter = new Vector2(pb.x + pb.width / 2f, pb.y + pb.height / 2f);
             Vector2 playerScreen = GetWorldToScreen2D(playerWorldCenter, _camera);
 
-            // Draw a glowing light: bright-ish center -> transparent outer.
-            Color inner = new Color(255, 240, 200, 200);
-            Color outer = new Color(255, 240, 200, 0);
+            // Draw a glowing light with a softer falloff by compositing two gradients:
+            // a stronger inner glow and a wider, faint outer glow for a softer edge.
+            Color inner = new Color((byte)255, (byte)240, (byte)200, (byte)200);
+            Color outer = new Color((byte)255, (byte)240, (byte)200, (byte)0);
             DrawCircleGradient((int)playerScreen.X, (int)playerScreen.Y, _lightRadius, inner, outer);
+            // faint outer halo to soften the transition
+            Color mid = new Color((byte)255, (byte)240, (byte)200, (byte)60);
+            Color midOuter = new Color((byte)255, (byte)240, (byte)200, (byte)0);
+            DrawCircleGradient((int)playerScreen.X, (int)playerScreen.Y, _lightRadius * 1.8f, mid, midOuter);
         }
 
         // Draw particles and player in world-space on top of the overlay so the light appears behind them
@@ -314,8 +360,8 @@ public class Game
             part.Draw();
         }
 
-        // draw player last so it appears above the light
-        player.Draw(_scale);
+    // draw player last so it appears above the light
+    player.Draw(_scale, _showMasks);
 
         // Debug: draw player bounding box in blue if requested
         if (_showMasks)
